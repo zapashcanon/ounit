@@ -34,6 +34,7 @@ open OUnit2
 open TestCommon
 
 let testFakeRunner = Conf.make_exec "testFakeRunner"
+let testFakeBadFinaliser = Conf.make_exec "testFakeBadFinaliser"
 
 type test_results =
     {
@@ -54,28 +55,28 @@ let string_of_test_results test_results =
     test_results.failures test_results.skip test_results.todo
     test_results.timeout
 
+let clean_env =
+  Array.of_list
+    (Array.fold_left
+    (fun lst e ->
+      let prefix = "OUNIT_" in
+      if String.length e >= String.length prefix then begin
+        let start = String.sub e  0 (String.length prefix) in
+        if start = prefix then
+          lst
+        else
+          e :: lst
+      end else
+        e :: lst)
+    [] (Unix.environment ()))
+
 let run_test_fake_runner ctxt runner args =
   let fn, _ = bracket_tmpfile ctxt in
-  let env =
-    Array.of_list
-      (Array.fold_left
-      (fun lst e ->
-        let prefix = "OUNIT_" in
-        if String.length e >= String.length prefix then begin
-          let start = String.sub e  0 (String.length prefix) in
-          if start = prefix then
-            lst
-          else
-            e :: lst
-        end else
-          e :: lst)
-      [] (Unix.environment ()))
-  in
   let () =
     assert_command
       ~ctxt
       ~exit_code:(Unix.WEXITED 1)
-      ~env:env
+      ~env:clean_env
       (testFakeRunner ctxt)
       ("-output-file" :: fn :: "-runner" :: runner :: args);
   in
@@ -140,6 +141,14 @@ let run_test_fake_runner ctxt runner args =
       timeout = !timeout;
     }
 
+let run_test_fake_bad_finaliser ctxt runner args =
+  assert_command
+    ~ctxt
+    ~exit_code:(Unix.WEXITED 1)
+    ~env:clean_env
+    (testFakeRunner ctxt)
+    ("-runner" :: runner :: args)
+
 let check_standard_results ?(extra_errors=0) ?(extra_timeouts=0) test_results =
   assert_equal
     ~msg:"test results"
@@ -170,6 +179,11 @@ let tests =
          run_test_fake_runner ctxt "processes" []
        in
          check_standard_results test_results);
+
+    "ProcessesWithBadFinaliser" >::
+    (fun ctxt ->
+       skip_if_notunix ();
+       run_test_fake_bad_finaliser ctxt "processes" ["-shards"; "2"]);
 
     "Processes#1" >::
     (fun ctxt ->

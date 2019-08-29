@@ -87,6 +87,15 @@ Executable testFakeShared
   Install: false
   Build$: flag(tests)
 
+# A fake test executable that helps to test with a bad finaliser, that fails
+# outside of the normal flow.
+Executable testFakeBadFinaliser
+  Path:   test
+  MainIs: testFakeBadFinaliser.ml
+  BuildDepends: oUnit
+  Install: false
+  Build$: flag(tests)
+
 # The main test.
 Executable test
   Path:   test
@@ -98,8 +107,9 @@ Executable test
 Test main
   Command: $test -testFakeHTML $testfakehtml \
     -testFakeRunner $testfakerunner \
-    -testFakeShared $testfakeshared
-  TestTools: test, testFakeHTML, testFakeRunner
+    -testFakeShared $testfakeshared \
+    -testFakeBadFinaliser $testfakebadfinaliser
+  TestTools: test, testFakeHTML, testFakeRunner, testFakeBadFinaliser
 
 Document "api-ounit"
   Title:       API reference for OUnit
